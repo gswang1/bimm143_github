@@ -1,0 +1,142 @@
+---
+title: "Class 10: Structural Bioinformatics (pt 1)"
+author: "Grace Wang (PID: A16968688)"
+format: pdf
+toc: TRUE
+---
+
+## The PDB database
+
+The main repository of biomolecular structure data is called the [Protein Data Bank](https://www.rcsb.org) (PDB). It is the second oldest database (after GenBank). 
+
+What is currently in the PDB?
+
+```{r}
+stats <- read.csv("Data Export Summary.csv", row.names = 1)
+head(stats)
+```
+
+### Question 1
+
+What percentage of structures in the PDB are solved by X-Ray and Electron Microscopy?
+
+```{r}
+del_comma <- function(x){
+  as.numeric(gsub(",", "", x))
+}
+
+stats <- data.frame(apply(stats, 2, del_comma), row.names = rownames(stats))
+```
+
+```{r}
+sum(stats$X.ray) / sum(stats$Total) * 100
+sum(stats$EM) / sum(stats$Total) * 100
+```
+
+### Question 2
+
+What proportion of structures in the PDB are protein?
+
+```{r}
+sum(stats["Protein (only)", -ncol(stats)]) / sum(stats$Total) * 100
+```
+
+### Question 3
+
+Type HIV in the PDB website search box on the home page and determine how many HIV-1 protease structures are in the current PDB?
+
+Skipped
+
+## Visualizing with Mol-star
+
+Explore the HIV-1 protease structure with PDB code `1HSG`. 
+
+We will use [Mol-star](https://molstar.org/viewer). 
+
+![Figure 1. A first view of HIV-Pr.](1HSG.png)
+
+![Figure 2. A view of the ligand-binding region of HIV-Pr.](1HSG_ligand.png)
+
+![Figure 3. The relevant Asp residues and water molecule (HOH 308) in MK1 binding.](1HSG_water.png)
+
+## Using the `bio3d` package in R
+
+The Bio3D package is focused on structural bioinformatics analysis and allows us to read and analyze PDB (and related) datasets. 
+
+```{r}
+library(bio3d)
+```
+
+```{r}
+pdb <- read.pdb("1HSG")
+pdb
+```
+
+```{r}
+attributes(pdb)
+```
+
+We can see atom data with `pdb$atom`. 
+
+```{r}
+head(pdb$atom)
+```
+
+```{r}
+head(pdbseq(pdb))
+```
+
+## Molecular visualization in R
+
+We can make a quick 3d visualization with the `view.pdb()` function. 
+
+```{r}
+#install.packages("pak")
+#pak::pak("bioboot/bio3dview")
+library(bio3dview)
+
+#install.packages("NGLVieweR")
+library(NGLVieweR)
+```
+
+```{r}
+# view.pdb(pdb, backgroundColor = "cyan", colorScheme = "sse") |>
+#  setSpin()
+```
+
+```{r}
+sel <- atom.select(pdb, resno = 25)
+
+# view.pdb(pdb, 
+#          highlight = sel, 
+#          highlight.style = "spacefill", 
+#          cols = c("green", "orange")) |> 
+#   setRock()
+```
+
+## Predicting functional motions of a structure
+
+We can finish off with a bioinformatics prediction of the functional motions of a protein. 
+
+We will run a Normal Mode Analysis (NMA). 
+
+```{r}
+adk <- read.pdb("6s36")
+adk
+```
+
+```{r}
+m <- nma(adk)
+
+plot(m)
+```
+
+```{r}
+# view.nma(m)
+```
+
+We can write out a trajectory of the predicted dynamics and view this in Mol-star.
+
+```{r}
+mktrj(m, file = "nma.pdb")
+```
