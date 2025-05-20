@@ -1,0 +1,143 @@
+---
+title: "Class 11: AlphaFold"
+author: "Grace Wang (PID: A16968688)"
+format: pdf
+toc: TRUE
+---
+
+Here we read the results from AlphaFold and try to interpret the models and quality score metrics. 
+
+```{r}
+library(bio3d)
+library(bio3dview)
+library(msa)
+
+pth <- "hivprdimer_23119/"
+pdb.files <- list.files(path = pth, full.names = T, pattern = ".pdb")
+```
+
+Align and superimpose all the models. 
+
+```{r}
+file.exists(pdb.files)
+```
+
+```{r}
+pdbs <- pdbaln(pdb.files, fit = TRUE, exefile = "msa")
+
+#view.pdbs(pdbs)
+```
+
+```{r}
+plot(pdbs$b[1, ], typ = "l", ylim = c(0, 100), ylab = "pLDDT")
+lines(pdbs$b[2, ], type = "l", col = "blue")
+lines(pdbs$b[3, ], type = "l", col = "green")
+lines(pdbs$b[4, ], type = "l", col = "orange")
+lines(pdbs$b[5, ], type = "l", col = "red")
+```
+
+```{r}
+#install.packages("pheatmap")
+library(pheatmap)
+rd <- rmsd(pdbs)
+
+colnames(rd) <- paste0("m",1:5)
+rownames(rd) <- paste0("m",1:5)
+pheatmap(rd)
+```
+
+
+### PAE
+
+```{r}
+#install.packages("jsonlite")
+library(jsonlite)
+```
+
+```{r}
+pae_files <- list.files(path = pth,
+                        pattern = ".*model.*\\.json",
+                        full.names = TRUE)
+```
+
+```{r}
+pae1 <- read_json(pae_files[1],simplifyVector = TRUE)
+pae2 <- read_json(pae_files[2],simplifyVector = TRUE)
+pae3 <- read_json(pae_files[3],simplifyVector = TRUE)
+pae4 <- read_json(pae_files[4],simplifyVector = TRUE)
+pae5 <- read_json(pae_files[5],simplifyVector = TRUE)
+
+attributes(pae1)
+```
+
+```{r}
+head(pae1$plddt)
+
+pae1$max_pae
+pae2$max_pae
+pae3$max_pae
+pae4$max_pae
+pae5$max_pae
+```
+
+```{r}
+plot.dmat(pae1$pae, 
+          xlab="Residue Position (i)",
+          ylab="Residue Position (j)")
+```
+
+```{r}
+plot.dmat(pae5$pae, 
+          xlab="Residue Position (i)",
+          ylab="Residue Position (j)",
+          grid.col = "black",
+          zlim=c(0,30))
+
+plot.dmat(pae1$pae, 
+          xlab="Residue Position (i)",
+          ylab="Residue Position (j)",
+          grid.col = "black",
+          zlim=c(0,30))
+```
+
+### Residue conservation
+
+```{r}
+aln_file <- list.files(path = pth,
+                       pattern = ".a3m$",
+                        full.names = TRUE)
+aln_file
+```
+
+```{r}
+aln <- read.fasta(aln_file[1], to.upper = TRUE)
+```
+
+```{r}
+dim(aln$ali)
+```
+
+```{r}
+sim <- conserv(aln)
+
+pdb <- read.pdb("1ake")
+
+plotb3(sim[1:99], sse=trim.pdb(pdb, chain="A"),
+       ylab="Conservation Score")
+```
+
+```{r}
+con <- consensus(aln, cutoff = 0.9)
+con$seq
+```
+
+```{r}
+m1.pdb <- read.pdb(pdb.files[1])
+occ <- vec2resno(c(sim[1:99], sim[1:99]), m1.pdb$atom$resno)
+write.pdb(m1.pdb, o=occ, file="m1_conserv.pdb")
+```
+
+![](M1_CONSERV.PDB.png)
+
+Homework: PAE plot, sequence conservation plot for find-a-gene project (q9)
+
