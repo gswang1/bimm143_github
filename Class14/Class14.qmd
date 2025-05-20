@@ -1,0 +1,254 @@
+---
+title: "Class 14: RNASeq mini-project"
+author: "Grace Wang (PID: A16968688)"
+format: pdf
+toc: TRUE
+---
+
+Here we will perform a complete RNASeq analysis from counts to pathways and biological interpretation. 
+
+The data for for hands-on session comes from GEO entry: GSE37704, which is associated with the following publication:
+
+- Trapnell C, Hendrickson DG, Sauvageau M, Goff L et al. "Differential analysis of gene regulation at transcript resolution with RNA-seq". Nat Biotechnol 2013 Jan;31(1):46-53. PMID: 23222703
+
+The authors report on differential analysis of lung fibroblasts in response to loss of the developmental transcription factor HOXA1. Their results and others indicate that HOXA1 is required for lung fibroblast and HeLa cell cycle progression. In particular their analysis show that "loss of HOXA1 results in significant expression level changes in thousands of individual transcripts, along with isoform switching events in key regulators of the cell cycle". For our session we have used their Sailfish gene-level estimated counts and hence are restricted to protein-coding genes only.
+
+# Required packages
+
+```{r, message = FALSE, warning = FALSE}
+library(DESeq2)
+library(AnnotationDbi)
+library(org.Hs.eg.db)
+library(pathview)
+library(gage)
+library(gageData)
+library(ggplot2)
+library(ggrepel)
+```
+
+# Data import
+
+```{r}
+countData <- read.csv("GSE37704_featurecounts.csv", row.names = 1)
+colData <- read.csv("GSE37704_metadata.csv", row.names = 1)
+```
+
+```{r}
+head(countData)
+head(colData)
+```
+
+## Tidy counts to match metadata
+
+Check the correspondence of colData rows and countData columns
+
+```{r}
+rownames(colData)
+```
+
+```{r}
+colnames(countData)
+```
+
+Remove the first column so we can match the metadata
+
+```{r}
+counts <- countData[, rownames(colData)]
+head(counts)
+```
+
+```{r}
+all(rownames(colData) == colnames(counts))
+```
+
+## Remove zero count genes
+
+We will have rows in `counts` for genes that we cannot say anything about because they have zero expression in the particular tissue we are looking at. 
+
+If `rowSums` is zero for a given gene, then it has no count data and we should exclude that gene from further consideration. 
+
+```{r}
+to.keep <- rowSums(counts) != 0
+
+cleancounts <- counts[to.keep, ]
+head(cleancounts)
+```
+
+> Q: How many genes do we have left?
+
+```{r}
+nrow(cleancounts)
+```
+
+
+# DESeq
+
+## Set up DESeq object for analysis
+
+```{r}
+dds <- DESeqDataSetFromMatrix(countData = cleancounts, 
+                              colData = colData, 
+                              design = ~condition)
+```
+
+
+## Run DESeq analysis
+
+```{r}
+dds <- DESeq(dds)
+```
+
+
+## Extract results
+
+```{r}
+res <- results(dds)
+head(res)
+```
+
+# Add gene annotations
+
+```{r}
+res$symbol <- mapIds(x = org.Hs.eg.db, 
+                     keys = rownames(res), 
+                     keytype = "ENSEMBL", 
+                     column = "SYMBOL")
+
+res$name <- mapIds(x = org.Hs.eg.db, 
+                   keys = rownames(res), 
+                   keytype = "ENSEMBL", 
+                   column = "GENENAME")
+
+res$entrez <- mapIds(x = org.Hs.eg.db, 
+                     keys = rownames(res), 
+                     keytype = "ENSEMBL", 
+                     column = "ENTREZID")
+
+head(res)
+```
+
+# Save results to CSV file
+
+```{r}
+write.csv(res, file = "results.csv")
+```
+
+
+# Result visualization
+
+```{r}
+mycols <- rep("gray", nrow(res))
+mycols[res$log2FoldChange <= -2] <- "blue"
+mycols[res$log2FoldChange >= 2] <- "blue"
+mycols[res$padj >= 0.05] <- "gray"
+```
+
+```{r}
+ggplot(res) + 
+  aes(x = log2FoldChange, y = -log(padj), label = symbol) + 
+  geom_point(col = mycols) + 
+  geom_vline(xintercept = c(-2, 2), col = "red") + 
+  geom_hline(yintercept = -log(0.05), col = "red") + 
+  labs(x = "Log2(Fold Change)", y = "-Log(adjusted p-value)") + 
+  geom_text_repel() + 
+  theme_bw()
+```
+
+
+# Pathway analysis
+
+```{r}
+data("kegg.sets.hs")
+data(sigmet.idx.hs)
+
+kegg.sets.hs <- kegg.sets.hs[sigmet.idx.hs]
+
+foldchanges <- res$log2FoldChange
+names(foldchanges) <- res$entrez
+```
+
+```{r}
+keggres <- gage(foldchanges, gsets = kegg.sets.hs)
+```
+
+## Upregulated pathways
+
+```{r}
+keggrespathways_up <- rownames(keggres$greater)[1:5]
+keggrespathways_up
+```
+
+```{r}
+keggresids_up <- substr(keggrespathways_up, start = 1, stop = 8)
+keggresids_up
+```
+
+```{r}
+pathview(gene.data = foldchanges, pathway.id = keggresids_up, species = "hsa")
+```
+
+![hsa04640](hsa04640.pathview.png)
+
+![hsa04630](hsa04630.pathview.png)
+
+![hsa00140](hsa00140.pathview.png)
+
+![hsa04142](hsa04142.pathview.png)
+
+![hsa04330](hsa04330.pathview.png)
+
+## Downregulated pathways
+
+```{r}
+keggrespathways_down <- rownames(keggres$less)[1:5]
+keggrespathways_down
+```
+
+```{r}
+keggresids_down <- substr(keggrespathways_down, start = 1, stop = 8)
+keggresids_down
+```
+
+```{r}
+pathview(gene.data = foldchanges, pathway.id = keggresids_down, species = "hsa")
+```
+
+![hsa04110](hsa04110.pathview.png)
+
+![hsa03030](hsa03030.pathview.png)
+
+![hsa03013](hsa03013.pathview.png)
+
+![hsa03440](hsa03440.pathview.png)
+
+![hsa04114](hsa04114.pathview.png)
+
+# Gene ontology
+
+```{r}
+data(go.sets.hs)
+data(go.subs.hs)
+
+gobpsets = go.sets.hs[go.subs.hs$BP]
+
+gobpres = gage(foldchanges, gsets=gobpsets, same.dir=TRUE)
+
+lapply(gobpres, head)
+```
+
+# Reactome analysis
+
+## Reactome analysis online
+
+We need to make a file of our significant genes that we can upload to the reactome webpage (<https://reactome.org/PathwayBrowser/#TOOL=AT>). 
+
+
+```{r}
+sig_genes <- res[res$padj <= 0.05 & !is.na(res$padj), "symbol"]
+print(paste("Total number of significant genes:", length(sig_genes)))
+
+write.table(sig_genes, file="significant_genes.txt", row.names=FALSE, col.names=FALSE, quote=FALSE)
+```
+
+
+![Reactome image - cell cycle, mitotic](R-HSA-69278.png)
