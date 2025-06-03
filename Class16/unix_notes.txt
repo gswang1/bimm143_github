@@ -1,0 +1,56 @@
+nano is a text editor (not on laptop)
+
+Some important unix cmds
+
+pwd - print working directory, show where we are in the file system
+cd - change directory
+ls - list contents of current directory
+mkdir - make a new directory
+rm - remove files and folders ** WARNING ** - check wd first
+mv - move a file or directory
+
+
+Useful shortcuts
+
+TAB - autocomplete
+~ - home folder
+../ drop to parent directory
+head - view first lines of file
+tail - view last lines of file
+less - page through file (less is more)
+ctrl + c - kill a job
+ctrl + z - stop/pause a job
+
+
+Instance ID
+
+i-0f7573d0ac806a90a (bimm143_grace)
+
+-Open an SSH client.
+-Locate your private key file. The key used to launch this instance is bimm143_gsw.pem
+-Run this command, if necessary, to ensure your key is not publicly viewable.
+  -chmod 400 "~/Downloads/bimm143_gsw.pem"
+-Connect to your instance using its Public DNS:
+  -ec2-52-33-100-86.us-west-2.compute.amazonaws.com
+
+Example:
+Open secure shell (ssh)
+ssh -i ~/Downloads/bimm143_gsw.pem ubuntu@ec2-52-33-100-86.us-west-2.compute.amazonaws.com
+
+Securely copy file from remote machine to local (scp)
+scp -i ~/Downloads/bimm143_gsw.pem ubuntu@ec2-52-33-100-86.us-west-2.compute.amazonaws.com:/home/ubuntu/work/mm-second.x.zebrafish.tsv results.tsv
+
+
+Common errors
+
+- key file incorrect
+- computer went down - check with ping host_name
+
+Run in parallel
+
+nano runme.sh
+line 1 & 
+line 2 &
+line 3
+
+Runs lines 1 and 2 in background with line 3 in foreground
