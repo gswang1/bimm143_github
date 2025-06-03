@@ -1,0 +1,132 @@
+---
+title: "Class 17 Homework"
+author: "Grace Wang (PID: A16968688)"
+format: pdf
+toc: TRUE
+---
+
+
+```{r, message = FALSE, warning = FALSE}
+#BiocManager::install("tximport")
+library(tximport)
+
+library(ggplot2)
+library(ggrepel)
+
+library(DESeq2)
+library(AnnotationDbi)
+library(org.Hs.eg.db)
+```
+
+```{r}
+folders <- dir(pattern = "SRR21568*")
+samples <- sub("_quant", "", folders)
+files <- file.path(folders, "abundance.h5")
+names(files) <- samples
+```
+
+```{r}
+txi.kallisto <- tximport(files, type = "kallisto", txOut = TRUE)
+head(txi.kallisto$counts)
+```
+
+```{r}
+colSums(txi.kallisto$counts)
+```
+
+```{r}
+sum(rowSums(txi.kallisto$counts)>0)
+```
+
+```{r}
+to.keep <- rowSums(txi.kallisto$counts) > 0
+kset.nonzero <- txi.kallisto$counts[to.keep,]
+```
+
+```{r}
+keep2 <- apply(kset.nonzero,1,sd)>0
+x <- kset.nonzero[keep2,]
+```
+
+```{r}
+pca <- prcomp(t(x), scale=TRUE)
+summary(pca)
+```
+
+```{r}
+colData <- data.frame(condition = factor(rep(c("control", "treatment"), each = 2)))
+rownames(colData) <- colnames(txi.kallisto$counts)
+
+y <- as.data.frame(pca$x)
+y$Condition <- as.factor(colData$condition)
+```
+
+```{r}
+ggplot(y) +
+  aes(PC1, PC2, col=Condition) +
+  geom_point() +
+  geom_text_repel(label=rownames(y)) +
+  theme_bw()
+```
+
+```{r}
+ggplot(y) +
+  aes(PC1, PC3, col=Condition) +
+  geom_point() +
+  geom_text_repel(label=rownames(y)) +
+  theme_bw()
+```
+
+```{r}
+ggplot(y) +
+  aes(PC2, PC3, col=Condition) +
+  geom_point() +
+  geom_text_repel(label=rownames(y)) +
+  theme_bw()
+```
+
+```{r}
+sampleTable <- data.frame(condition = factor(rep(c("control", "treatment"), each = 2)))
+rownames(sampleTable) <- colnames(txi.kallisto$counts)
+```
+
+```{r}
+dds <- DESeqDataSetFromTximport(txi.kallisto,
+                                sampleTable, 
+                                ~condition)
+```
+
+```{r}
+dds <- DESeq(dds)
+```
+
+```{r}
+res <- results(dds)
+head(res)
+```
+
+```{r}
+res$symbol <- mapIds(x = org.Hs.eg.db, 
+                     keys = rownames(res), 
+                     keytype = "ENSEMBLTRANS", 
+                     column = "SYMBOL")
+
+
+```
+ 
+```{r}
+mycols <- rep("gray", nrow(res))
+mycols[res$log2FoldChange <= -2] <- "blue"
+mycols[res$log2FoldChange >= 2] <- "blue"
+mycols[res$padj >= 0.05] <- "gray"
+
+ggplot(res) + 
+  aes(x = log2FoldChange, y = -log(padj), label = symbol) + 
+  geom_point(col = mycols, alpha = 0.5) + 
+  geom_vline(xintercept = c(-2, 2), col = "red") + 
+  geom_hline(yintercept = -log(0.05), col = "red") + 
+  labs(x = "Log2(Fold Change)", y = "-Log(adjusted p-value)") + 
+  geom_text_repel(max.overlaps = 50) + 
+  theme_bw()
+```
+
