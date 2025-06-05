@@ -57,7 +57,7 @@ Sidenote:
 
 ```{r}
 library(bio3dview)
-view.pdbs(pdbs)
+#view.pdbs(pdbs)
 ```
 
 This is better than directly putting the files into Mol-star, but it is still difficult to see what is similar and different in all these structures or learn about how this family works. 
