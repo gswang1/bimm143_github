@@ -56,7 +56,7 @@ pdbs <- pdbaln(files, fit = TRUE, exefile = "msa")
 Sidenote:
 
 ```{r}
-library(bio3dview)
+#library(bio3dview)
 #view.pdbs(pdbs)
 ```
 
@@ -74,7 +74,7 @@ plot(pc, pc.axes = 1:2)
 ```
 
 ```{r}
-view.pca(pc)
+#view.pca(pc)
 ```
 
 Write a PDB "trajectory" for Mol-star. 
