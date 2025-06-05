@@ -1,7 +1,7 @@
 # BIMM143
 Classwork from [SP25 BIMM143](https://bioboot.github.io/bimm143_S25/) at UC San Diego
 
-- 04: Intro to R
+- 04: [Intro to R](https://github.com/gswang1/bimm143_github/blob/main/Class04/class4.pdf)
 
 - 05: [Advanced graphics with **ggplot2**](https://github.com/gswang1/bimm143_github/blob/main/Class05/class05.md)
 
@@ -29,4 +29,4 @@ Classwork from [SP25 BIMM143](https://bioboot.github.io/bimm143_S25/) at UC San 
 
 - 18: [Pertussis mini-project](https://github.com/gswang1/bimm143_github/blob/main/Class18/Class18.md)
 
-- 19: Cancer mutation mini-project
+- 19: [Cancer mutation mini-project](https://github.com/gswang1/bimm143_github/blob/main/Class19/lab19.pdf)
